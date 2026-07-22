@@ -93,6 +93,27 @@ the ranking is stable out-of-sample, it just isn't a *winning* ranking.
 
 Results vary by asset, base rule, and window — try your own with the script.
 
+### Bonus — does order flow *anticipate* regime transitions?
+
+A sharper question than "does the regime help you trade": can **taker order-flow
+imbalance** (the aggressor side, computed from Binance's `taker_buy_base` column
+at bar frequency) tell you a regime change is coming before price does? A
+"transition" is a flip of the irreversibility label; the target is whether one
+happens in the next 12 bars. Purged walk-forward, pooled OOS AUC — reproduce
+with `python scripts/run_flow_experiment.py`.
+
+| features                    | OOS AUC |
+|-----------------------------|--------:|
+| price only (returns + vol)  |  0.522  |
+| price + order flow          |  0.513  |
+| order flow only             |  0.505  |
+
+**Order flow does not anticipate regime transitions here.** Flow-only is a coin
+flip (0.505), and adding it to price features slightly *hurts*. Price/vol alone
+carries a whisper of signal (0.522) but nothing you'd trade. A tidy negative for
+the popular "order flow leads regime change" intuition, at 5-minute resolution
+with this transition definition.
+
 ---
 
 ## Install & run

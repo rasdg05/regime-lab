@@ -12,6 +12,7 @@ from .detectors.baselines import (
     RealizedVolDetector, TrendSlopeDetector, HMMDetector,
 )
 from .benchmark import run_benchmark
+from .flow_experiment import run_flow_experiment
 
 __version__ = "0.1.0"
 
@@ -19,5 +20,5 @@ __all__ = [
     "IrreversibilityDetector", "irreversibility",
     "PermutationEntropyDetector", "permutation_entropy",
     "RealizedVolDetector", "TrendSlopeDetector", "HMMDetector",
-    "run_benchmark",
+    "run_benchmark", "run_flow_experiment",
 ]

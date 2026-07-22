@@ -31,9 +31,25 @@ class Series:
     ts: np.ndarray          # int64 ms epoch
     close: np.ndarray       # float
     labels: np.ndarray | None = None    # ground truth (synthetic only)
+    volume: np.ndarray | None = None        # base volume per bar (real data)
+    taker_buy: np.ndarray | None = None     # taker-buy base volume per bar (order flow)
 
     def __len__(self) -> int:
         return len(self.close)
+
+    def flow_imbalance(self) -> np.ndarray:
+        """Per-bar taker order-flow imbalance in [-1, 1]: (buy - sell) / volume.
+        The aggressor side — a bar-frequency proxy for order flow / CVD. NaN
+        where volume is missing or zero."""
+        if self.volume is None or self.taker_buy is None:
+            raise ValueError("Series has no volume/taker_buy (load with with_flow=True)")
+        vol = np.asarray(self.volume, float)
+        buy = np.asarray(self.taker_buy, float)
+        sell = vol - buy
+        with np.errstate(divide="ignore", invalid="ignore"):
+            imb = (buy - sell) / vol
+        imb[~np.isfinite(imb)] = np.nan
+        return imb
 
 
 def synthetic_regimes(
@@ -88,7 +104,9 @@ def synthetic_regimes(
     return Series(ts=ts, close=close, labels=labels)
 
 
-def _read_kline_zip(raw: bytes) -> list[tuple[int, float]]:
+def _read_kline_zip(raw: bytes) -> list[tuple[int, float, float, float]]:
+    # Binance kline columns: open_time, o, h, l, c(4), volume(5), close_time,
+    # quote_vol, count, taker_buy_base(9), taker_buy_quote, ignore.
     rows = []
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
         name = zf.namelist()[0]
@@ -97,7 +115,7 @@ def _read_kline_zip(raw: bytes) -> list[tuple[int, float]]:
             for r in csv.reader(text):
                 if not r or not r[0].lstrip("-").isdigit():
                     continue                        # skip header row if present
-                rows.append((int(r[0]), float(r[4])))   # open_time, close
+                rows.append((int(r[0]), float(r[4]), float(r[5]), float(r[9])))
     return rows
 
 
@@ -107,28 +125,28 @@ def load_binance_vision(
     end: date | None = None,
     interval: str = "5m",
     timeout: int = 60,
+    with_flow: bool = False,
 ) -> Series:
     """Download public USDⓈ-M futures klines from Binance Vision.
 
     ``start``/``end`` are inclusive dates (default: the 14 days ending
-    yesterday). Missing days (weekends for some products, gaps) are skipped with
-    a warning rather than failing the whole pull.
+    yesterday). Missing days are skipped with a warning rather than aborting.
+    ``with_flow=True`` also returns per-bar volume and taker-buy base volume, so
+    ``Series.flow_imbalance()`` can compute the order-flow proxy.
     """
     if end is None:
         end = date.today() - timedelta(days=1)
     if start is None:
         start = end - timedelta(days=13)
-    ts_all: list[int] = []
-    close_all: list[float] = []
+    ts_all, close_all, vol_all, buy_all = [], [], [], []
     d = start
     while d <= end:
         url = f"{_BINANCE_VISION}/{symbol}/{interval}/{symbol}-{interval}-{d.isoformat()}.zip"
         try:
             with urllib.request.urlopen(url, timeout=timeout) as r:
-                rows = _read_kline_zip(r.read())
-            for t, c in rows:
-                ts_all.append(t)
-                close_all.append(c)
+                for t, c, v, tb in _read_kline_zip(r.read()):
+                    ts_all.append(t); close_all.append(c)
+                    vol_all.append(v); buy_all.append(tb)
         except Exception as e:      # noqa: BLE001 - a missing day shouldn't abort
             print(f"[data] skip {symbol} {d}: {e}")
         d += timedelta(days=1)
@@ -137,4 +155,8 @@ def load_binance_vision(
     order = np.argsort(ts_all, kind="mergesort")
     ts = np.asarray(ts_all, dtype=np.int64)[order]
     close = np.asarray(close_all, dtype=float)[order]
+    if with_flow:
+        return Series(ts=ts, close=close,
+                      volume=np.asarray(vol_all, float)[order],
+                      taker_buy=np.asarray(buy_all, float)[order])
     return Series(ts=ts, close=close)
