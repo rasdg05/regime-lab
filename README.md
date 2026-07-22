@@ -131,12 +131,19 @@ so a platform can liveness-probe it and you can watch it in production.
 
 ### Deploy (Railway / Render / Fly)
 
+Local:
+
 ```bash
 docker build -t regime-lab .
 docker run -p 8000:8000 regime-lab
 ```
 
-The image reads `$PORT` (injected by the PaaS) and serves `regimelab.api:app`.
+One-click on a PaaS — the repo ships the config so there's nothing to wire:
+
+* **Render** — New → Blueprint → point at this repo (`render.yaml`, health check `/health`).
+* **Railway** — New → Deploy from repo; `railway.json` pins the Dockerfile build and health check.
+
+All of them inject `$PORT`; the image / `Procfile` serves `regimelab.api:app` on it.
 
 ---
 
