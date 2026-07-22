@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "regime-lab"
+version = "0.1.0"
+description = "Parameter-free market-regime detection (HVG time-irreversibility), benchmarked honestly against baselines with purged walk-forward and the Deflated Sharpe Ratio."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "rasdg05" }]
+keywords = ["quant", "regime-detection", "visibility-graph", "time-irreversibility",
+            "deflated-sharpe", "walk-forward", "market-microstructure"]
+dependencies = ["numpy>=1.23"]
+
+[project.optional-dependencies]
+serve = ["fastapi>=0.110", "uvicorn>=0.27", "pydantic>=2"]
+hmm = ["hmmlearn>=0.3"]
+flow = ["scikit-learn>=1.3"]        # the flow->regime-transition bonus experiment
+dev = ["pytest>=7", "fastapi>=0.110", "uvicorn>=0.27", "pydantic>=2",
+       "hmmlearn>=0.3", "scikit-learn>=1.3"]
+
+[project.urls]
+Homepage = "https://github.com/rasdg05/regime-lab"
+
+[tool.setuptools.packages.find]
+include = ["regimelab*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

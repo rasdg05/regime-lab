@@ -1,0 +1,8 @@
+# Core (detectors + evaluation) needs only numpy.
+numpy>=1.23
+# Serving the live endpoint:
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2
+# Optional baseline (2-state HMM); comment out if you don't need it:
+hmmlearn>=0.3

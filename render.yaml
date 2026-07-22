@@ -1,0 +1,10 @@
+# Render blueprint — one-click deploy of the live regime endpoint.
+# In Render: New > Blueprint > point at this repo. Uses the Dockerfile.
+services:
+  - type: web
+    name: regime-lab
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
